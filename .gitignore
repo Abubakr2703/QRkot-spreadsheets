@@ -1,0 +1,26 @@
+venv/
+env/
+.venv/
+
+# Кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Тесты
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Секреты
+.env
+.env.*
+!.env.example
+
+# База данных
+*.db
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
