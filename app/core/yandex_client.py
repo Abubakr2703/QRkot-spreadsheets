@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, AsyncGenerator
 
 import httpx
 from fastapi import HTTPException, status
