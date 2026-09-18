@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 NAME_MIN_LENGTH = 5
 NAME_MAX_LENGTH = 100
@@ -26,6 +26,22 @@ class ProjectCharityCreate(ProjectCharityBase):
 
 class ProjectCharityUpdate(ProjectCharityBase):
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode='before')
+    @classmethod
+    def reject_explicit_null(cls, data):
+        """Запрещает явно передавать null в PATCH-запросе.
+
+        Поле можно не передавать - тогда оно не изменится.
+        Но если поле передано со значением null - это ошибка.
+        """
+        if isinstance(data, dict):
+            for field in ('name', 'description', 'full_amount'):
+                if field in data and data[field] is None:
+                    raise ValueError(
+                        f'Поле "{field}" не может быть null'
+                    )
+        return data
 
 
 class ProjectCharityDB(ProjectCharityCreate):

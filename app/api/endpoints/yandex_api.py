@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,6 +16,9 @@ router = APIRouter()
 SessionDep = Annotated[AsyncSession, Depends(get_async_session)]
 SuperUserDep = Annotated[User, Depends(current_superuser)]
 ClientDep = Annotated[YandexDiskClient, Depends(get_yandex_client)]
+
+
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -37,10 +41,11 @@ async def create_report(
 
     try:
         public_url = await create_simple_report(projects, client)
-    except Exception as e:
+    except Exception:
+        logger.exception("Ошибка при создании отчёта на Яндекс Диске")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=(f"Ошибка при создании отчёта: {e}"),
+            detail="Не удалось создать отчёт. Попробуйте позже.",
         )
 
     return public_url

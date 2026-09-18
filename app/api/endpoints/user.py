@@ -20,17 +20,16 @@ router.include_router(
 )
 
 
-users_router = fastapi_users.get_users_router(UserRead, UserUpdate)
-router.include_router(
-    users_router,
-    prefix="/users",
-    tags=["users"],
-)
-
-
 @router.delete("/users/{id}")
 async def delete_user_disabled(id: int):
     raise HTTPException(
         status_code=HTTPStatus.METHOD_NOT_ALLOWED,
         detail="Удаление пользователей запрещено"
     )
+
+users_router = fastapi_users.get_users_router(UserRead, UserUpdate)
+router.include_router(
+    users_router,
+    prefix="/users",
+    tags=["users"],
+)

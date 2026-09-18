@@ -1,6 +1,9 @@
 from typing import Optional
+
 import httpx
 from fastapi import HTTPException, status
+
+from app.core.config import settings
 
 
 class YandexDiskClient:
@@ -38,10 +41,6 @@ class YandexDiskClient:
         if not upload_url:
             raise ValueError("Не удалось получить ссылку для загрузки")
 
-        upload_url = response.json().get('href')
-        if not upload_url:
-            raise ValueError('Не удалось получить ссылку для загрузки')
-
         return upload_url, file_path
 
     async def upload_file(self, upload_url: str, content: bytes):
@@ -50,9 +49,9 @@ class YandexDiskClient:
             upload_url,
             content=content,
             headers={
-                'Content-Type': (
-                    'application/vnd.openxmlformats-officedocument.'
-                    'spreadsheetml.sheet'
+                "Content-Type": (
+                    "application/vnd.openxmlformats-officedocument."
+                    "spreadsheetml.sheet"
                 )
             },
         )
@@ -88,27 +87,24 @@ class YandexDiskClient:
 
     async def _create_folder(self, folder: str):
         """Создаёт папку, если её нет"""
-        try:
-            await self._client.put(
-                f"{self.base_url}/resources",
-                headers=self.headers,
-                params={"path": f"disk:/{folder}"}
-            )
-        except httpx.HTTPStatusError as e:
-            # Папка уже существует (код 409) — игнорируем
-            if e.response.status_code != 409:
-                raise
+        response = await self._client.put(
+            f"{self.base_url}/resources",
+            headers=self.headers,
+            params={"path": f"disk:/{folder}"},
+        )
+        if response.status_code not in (201, 409):
+            response.raise_for_status()
 
 
-async def get_yandex_client():
-    """Dependency для получения клиента Яндекс Диска"""
-    from app.core.config import settings
-
-    if settings.yandex_disk_token is None:
+async def get_yandex_client() -> AsyncGenerator[YandexDiskClient, None]:
+    """Dependency для получения клиента Яндекс Диска."""
+    if not settings.yandex_disk_token:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Яндекс Диск не настроен. Пожалуйста, "
-                   "добавьте YANDEX_DISK_TOKEN в .env-файл"
+            detail=(
+                "Яндекс Диск не настроен. Пожалуйста, "
+                "добавьте YANDEX_DISK_TOKEN в .env-файл"
+            ),
         )
 
     async with YandexDiskClient(settings.yandex_disk_token) as client:

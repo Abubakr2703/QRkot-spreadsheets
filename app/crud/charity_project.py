@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.base import CRUDBase
@@ -24,13 +24,15 @@ class CRUDCharityProject(CRUDBase):
 
     async def get_projects_by_completion_rate(self, session: AsyncSession):
         """Возвращает список закрытых проектов,
-        отсортированных по времени сбора."""
+        отсортированных по времени сбора (от самых быстрых к самым долгим)."""
+        collection_time = (
+            func.julianday(self.model.close_date) -
+            func.julianday(self.model.create_date)
+        )
         result = await session.execute(
             select(self.model)
             .where(self.model.fully_invested.is_(True))
-            .order_by(
-                (self.model.close_date - self.model.create_date).asc()
-            )
+            .order_by(collection_time.asc())
         )
         return result.scalars().all()
 

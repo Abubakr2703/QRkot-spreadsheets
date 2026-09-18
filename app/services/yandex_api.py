@@ -1,4 +1,5 @@
 import io
+import re
 from datetime import datetime, timedelta
 from typing import List
 
@@ -7,10 +8,14 @@ import xlsxwriter
 from app.core.config import settings
 from app.core.yandex_client import YandexDiskClient
 from app.models.charity_project import CharityProject
+from app.services.constants import HEADER_BG_COLOR, REPORT_SHEET_NAME
 
-REPORT_FORMAT = "%Y-%m-%d_%H-%M-%S"
-HEADER_BG_COLOR = '#4472C4'
-REPORT_SHEET_NAME = 'Отчёт'
+
+def _safe_filename(name: str) -> str:
+    """Убирает из имени файла символы, недопустимые в именах файлов."""
+    cleaned = re.sub(r'[^\w\s\-.]', '_', name, flags=re.UNICODE)
+    cleaned = cleaned.replace(' ', '_')
+    return cleaned
 
 
 def format_time_delta(delta: timedelta) -> str:
@@ -29,15 +34,19 @@ async def create_simple_report(
     yandex_client: YandexDiskClient,
 ) -> str:
     now_date_time = datetime.now().strftime(settings.report_format)
-    filename = f'Отчёт_{now_date_time}'
-
+    safe_date = _safe_filename(now_date_time)
+    filename = f'Отчёт_{safe_date}'
     upload_url, file_path = await yandex_client.create_excel_file(filename)
 
     output = io.BytesIO()
-    workbook = xlsxwriter.Workbook(output)
+    workbook = xlsxwriter.Workbook(output, {'in_memory': True})
     worksheet = workbook.add_worksheet(REPORT_SHEET_NAME)
 
-    title_format = workbook.add_format({'bold': True, 'font_size': 14})
+    title_format = workbook.add_format({
+        'bold': True,
+        'font_size': 14,
+        'border': 1,
+    })
     header_format = workbook.add_format({
         'bold': True,
         'bg_color': HEADER_BG_COLOR,
